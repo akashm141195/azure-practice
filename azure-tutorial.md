@@ -603,6 +603,12 @@ CREATE TABLE users (
 );
 INSERT INTO users (name, email) VALUES ('Alice', 'alice@example.com');
 INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
+
+# 1. Log in as postgres and grant table permissions to appuser
+sudo -u postgres psql -d workshopdb -c "GRANT USAGE ON SCHEMA public TO appuser; GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO appuser;"
+
+# 2. Try your query again as appuser
+psql -h localhost -U appuser -d workshopdb -c "SELECT * FROM users;"
 EOF
 ```
 

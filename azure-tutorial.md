@@ -369,7 +369,7 @@ az network lb rule create \
   --probe-name lb-health-probe
 
 # Manually add frontend VM NIC to backend pool
-Backend pools > IP configurations > Add > VM-frontend
+Under Loadbalancers > lb-frontend > Backend pools > IP configurations > Add > VM-frontend
 ```
 
 ---

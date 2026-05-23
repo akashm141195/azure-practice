@@ -901,8 +901,19 @@ server {
     root /var/www/workshop;
     index index.html;
 
+    # Serve static frontend
     location / {
         try_files $uri $uri/ =404;
+    }
+
+    # Proxy /api/* calls to the App VM privately inside the VNet.
+    # Browser calls /api/users → Nginx forwards to 10.0.2.4:8080/users internally.
+    # The app VM's private IP never gets exposed to the browser — no CORS issue.
+    location /api/ {
+        proxy_pass http://10.0.2.4:8080/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     }
 }
 ```

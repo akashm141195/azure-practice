@@ -368,18 +368,8 @@ az network lb rule create \
   --backend-pool-name lb-backend-pool \
   --probe-name lb-health-probe
 
-# Add frontend VM NIC to backend pool
-NIC_ID=$(az vm show \
-  --resource-group rg-workshop-user01 \
-  --name vm-frontend \
-  --query "networkProfile.networkInterfaces[0].id" -o tsv)
-
-az network nic ip-config address-pool add \
-  --address-pool lb-backend-pool \
-  --ip-config-name ipconfig1 \
-  --nic-name $(basename $NIC_ID) \
-  --resource-group rg-workshop-user01 \
-  --lb-name lb-frontend
+# Manually add frontend VM NIC to backend pool
+Backend pools > IP configurations > Add > VM-frontend
 ```
 
 ---
@@ -795,7 +785,7 @@ Create the HTML file using vi:
 sudo vi /var/www/workshop/index.html
 ```
 
-Paste the following (update the `API` constant to your **App VM's private IP**):
+Paste the following:
 
 ```html
 <!DOCTYPE html>

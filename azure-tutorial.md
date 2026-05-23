@@ -601,14 +601,13 @@ CREATE TABLE users (
     email VARCHAR(150) UNIQUE NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+-- GRANT ALL PRIVILEGES ON DATABASE only grants DB-level access (connect, create schemas).
+-- Table-level grants must be done separately AFTER the table is created,
+-- while still connected as postgres superuser inside workshopdb.
+GRANT ALL PRIVILEGES ON TABLE users TO appuser;
+GRANT USAGE, SELECT ON SEQUENCE users_id_seq TO appuser;
 INSERT INTO users (name, email) VALUES ('Alice', 'alice@example.com');
 INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
-
-# 1. Log in as postgres and grant table permissions to appuser
-sudo -u postgres psql -d workshopdb -c "GRANT USAGE ON SCHEMA public TO appuser; GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO appuser;"
-
-# 2. Try your query again as appuser
-psql -h localhost -U appuser -d workshopdb -c "SELECT * FROM users;"
 EOF
 ```
 
@@ -648,6 +647,7 @@ Paste the following:
 
 ```python
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from azure.identity import ManagedIdentityCredential
 from azure.keyvault.secrets import SecretClient
@@ -655,6 +655,16 @@ import psycopg2
 import os
 
 app = FastAPI(title="Workshop API", version="1.0.0")
+
+# CORS — allows the browser to call this API from a different origin.
+# In production, replace "*" with your actual frontend domain e.g. "https://yourapp.com"
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 KEY_VAULT_URL = os.getenv("KEY_VAULT_URL", "https://kv-workshop-akm01.vault.azure.net/")
 
@@ -835,8 +845,9 @@ Paste the following (update the `API` constant to your **App VM's private IP**):
   </div>
 
   <script>
-    // !! Update this to your App VM's private IP !!
-    const API = "http://10.0.2.4:8080";
+    // Uses /api/ — Nginx proxies this to the App VM's private IP internally.
+    // No private IP exposed to the browser, no CORS issue.
+    const API = "/api";
 
     async function loadUsers() {
       try {
@@ -940,16 +951,17 @@ Load Balancer (Public IP) — only public entry point
     ▼
 vm-frontend (Nginx) — no public IP
     │  serves index.html
-    │  JS calls http://10.0.2.4:8080/users
+    │  browser calls /api/users (same origin, no CORS issue)
+    │  Nginx proxies /api/* → http://10.0.2.4:8080/* internally
     ▼
-vm-app (FastAPI on port 8080) — private only
+vm-app (FastAPI on port 8080) — private only, never exposed to browser
     │  fetches DB password from Key Vault via Managed Identity
     │  connects to PostgreSQL on 10.0.3.4:5432
     ▼
 vm-db (PostgreSQL) — private only
     │  returns rows
     ▼
-API → Frontend → Browser renders table
+API → Nginx → Browser renders table
 ```
 
 ---
